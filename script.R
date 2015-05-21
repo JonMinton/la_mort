@@ -31,6 +31,7 @@ data_tidied <- dta  %>%
     year = str_extract(label, "\\d{1,4}"), 
     category = str_replace(str_extract(label, "\\D*"), "_$", ""),
     sex=ifelse(sex==1, "male", "female"))   %>% 
-  select(lad2013_code, country, sex, age, year, category, count)
+  select(lad2013_code, country, sex, age, year, category, count) %>%
+  spread(category, count)
 
 write.csv(data_tidied, file="data/tidied/england_la_count.csv", row.names=FALSE)
