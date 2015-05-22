@@ -57,16 +57,34 @@ write.csv(ex, file="data/tidied/england_ex.csv", row.names=FALSE)
 
 # cumulative survival from age 50, 65, and 80
 
+fn <- function(X){
+  out <- X
+  out <- out %>% mutate(cmr = deaths/population)
+  
+  out$surv <- NA
+  out$surv[out$age==0] <- 1
+  for (i in 1:max(out$age)){
+    out$surv[out$age==i] <- out$surv[out$age == i - 1 ] * (1 -  out$cmr[out$age == i - 1])
+  }    
+  return(out)
+}
+
 dta <- data %>%
   select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
-  mutate(cmr=deaths/population) %>%
-  filter(!is.na(cmr)) %>%
+  filter(!is.na(deaths)) %>%
   group_by(la, sex, year) %>%
-  arrange(la, sex, year, age) %>%
-  mutate(
-    L = 1
-    ) 
-    
+  arrange(age) %>%
+  do(fn(.))
+
+
+write.csv(dta, file="data/tidied/cumulative_surv_by_la.csv", row.names=F)
+las <- unique(dta$la)
+
+dta %>%
+  ggplot(data=.) +
+  geom_line(aes(x=age, y= surv, group=la)) + 
+  facet_grid(year~sex)
+
 
   
 
