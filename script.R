@@ -129,4 +129,53 @@ write.csv(med_le, file="data/tidied/median_cond_le_by_la.csv", row.names=F)
 
 # regression coeffs -------------------------------------------------------
 
+data <- read.csv(file="data/tidied/cumulative_surv_by_la.csv")  %>% 
+  tbl_df
+
+fn <- function(X){
+  this_year <- X$year[1]
+  this_la  <- X$la[1]
+  this_sex <- X$sex[1]
+  
+  X <- X %>%
+    mutate(adj_cmr = (deaths + 0.5) / (population + 0.5))
+  
+  c_35 <- X %>%
+    filter(age >=35) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.)  %>% .["age"] %>%
+    as.numeric
+  
+  c_50 <- X %>%
+    filter(age >=50) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+
+  c_65 <- X %>%
+    filter(age >=65) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+
+  c_80 <- X %>%
+    filter(age >=80) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+  
+  output <- data.frame(
+    la = this_la, 
+    year = this_year,
+    sex = this_sex,
+    c_35, c_50, c_65, c_80
+    )
+  return(output)
+}
+
+
+dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+
+write.csv(dta, file="data/tidied/coeffs_on_age_by_la.csv", row.names=F)
+
 
