@@ -179,3 +179,50 @@ dta <- ddply(data, .(la, year, sex), fn, .progress="text")
 write.csv(dta, file="data/tidied/coeffs_on_age_by_la.csv", row.names=F)
 
 
+fn <- function(X){
+  this_year <- X$year[1]
+  this_la  <- X$la[1]
+  this_sex <- X$sex[1]
+  
+  X <- X %>%
+    mutate(adj_cmr = (deaths + 0.5) / (population + 0.5))
+  
+  s_35 <- X %>%
+    filter(age >=35) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+    
+  s_50 <- X %>%
+    filter(age >=50) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  s_65 <- X %>%
+    filter(age >=65) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  s_80 <- X %>%
+    filter(age >=80) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  output <- data.frame(
+    la = this_la, 
+    year = this_year,
+    sex = this_sex,
+    s_35, s_50, s_65, s_80
+  )
+  return(output)
+}
+
+
+dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+
+write.csv(dta, file="data/tidied/ses_on_coeffs_on_age_by_la.csv", row.names=F)
+
+
