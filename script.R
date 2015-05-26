@@ -55,7 +55,8 @@ ex <- data  %>%
 write.csv(ex, file="data/tidied/england_ex.csv", row.names=FALSE)
 
 
-# cumulative survival from age 50, 65, and 80
+# Cumulative survival from ages 50, 65 and 80 -----------------------------
+
 
 fn <- function(X){
   out <- X
@@ -78,14 +79,152 @@ dta <- data %>%
 
 
 write.csv(dta, file="data/tidied/cumulative_surv_by_la.csv", row.names=F)
-las <- unique(dta$la)
-
-dta %>%
-  ggplot(data=.) +
-  geom_line(aes(x=age, y= surv, group=la)) + 
-  facet_grid(year~sex)
 
 
+
+# conditional median les --------------------------------------------------
+
+
+data <- read.csv("data/tidied/cumulative_surv_by_la.csv") %>%
+  tbl_df
+
+med_le_0 <- data  %>% 
+  group_by(la, year, sex)  %>% 
+  mutate(tmp2 = lag(surv))  %>% 
+  mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
+  summarise(med_le_0 = age[flag==T][1])  
+
+med_le_50 <- data %>%
+  group_by(la, year, sex) %>%
+  mutate(surv = surv/surv[age==50]) %>%
+  mutate(tmp2 = lag(surv))  %>% 
+  mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
+  summarise(med_le_50 = age[flag==T][1])  
+
+med_le_65 <- data %>%
+  group_by(la, year, sex) %>%
+  mutate(surv = surv/surv[age==65]) %>%
+  mutate(tmp2 = lag(surv))  %>% 
+  mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
+  summarise(med_le_65 = age[flag==T][1])  
+
+med_le_80 <- data %>%
+  group_by(la, year, sex) %>%
+  mutate(surv = surv/surv[age==80]) %>%
+  mutate(tmp2 = lag(surv))  %>% 
+  mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
+  summarise(med_le_80 = age[flag==T][1])  
+
+
+
+med_le <- med_le_0 %>%
+  full_join(med_le_50) %>%
+  full_join(med_le_65) %>%
+  full_join(med_le_80)
+
+write.csv(med_le, file="data/tidied/median_cond_le_by_la.csv", row.names=F)
+
+
+
+
+# regression coeffs -------------------------------------------------------
+
+data <- read.csv(file="data/tidied/cumulative_surv_by_la.csv")  %>% 
+  tbl_df
+
+fn <- function(X){
+  this_year <- X$year[1]
+  this_la  <- X$la[1]
+  this_sex <- X$sex[1]
+  
+  X <- X %>%
+    mutate(adj_cmr = (deaths + 0.5) / (population + 0.5))
+>>>>>>> c2f66ec2023084db7dba0a916be157e0dbf4c91b
+  
+  c_35 <- X %>%
+    filter(age >=35) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.)  %>% .["age"] %>%
+    as.numeric
+  
+  c_50 <- X %>%
+    filter(age >=50) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+
+  c_65 <- X %>%
+    filter(age >=65) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+
+  c_80 <- X %>%
+    filter(age >=80) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+  
+  output <- data.frame(
+    la = this_la, 
+    year = this_year,
+    sex = this_sex,
+    c_35, c_50, c_65, c_80
+    )
+  return(output)
+}
+
+
+dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+
+write.csv(dta, file="data/tidied/coeffs_on_age_by_la.csv", row.names=F)
+
+
+fn <- function(X){
+  this_year <- X$year[1]
+  this_la  <- X$la[1]
+  this_sex <- X$sex[1]
+  
+  X <- X %>%
+    mutate(adj_cmr = (deaths + 0.5) / (population + 0.5))
+  
+  s_35 <- X %>%
+    filter(age >=35) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+    
+  s_50 <- X %>%
+    filter(age >=50) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  s_65 <- X %>%
+    filter(age >=65) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  s_80 <- X %>%
+    filter(age >=80) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  output <- data.frame(
+    la = this_la, 
+    year = this_year,
+    sex = this_sex,
+    s_35, s_50, s_65, s_80
+  )
+  return(output)
+}
+
+
+dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+
+write.csv(dta, file="data/tidied/ses_on_coeffs_on_age_by_la.csv", row.names=F)
 
 # e65 compared with change in e65  ----------------------------------------
 
@@ -103,6 +242,4 @@ dta  %>%
   facet_wrap(~ sex) + 
   geom_smooth(aes(x=e65, y=e65_change), method="lm") + 
   geom_hline(xintercept=0, linetype="dashed")
-
-  
 
