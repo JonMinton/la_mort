@@ -86,5 +86,23 @@ dta %>%
   facet_grid(year~sex)
 
 
+
+# e65 compared with change in e65  ----------------------------------------
+
+
+dta <- read.csv("data/tidied/england_ex.csv") %>%
+  tbl_df
+
+dta  %>% 
+  group_by(sex, la)  %>% 
+  arrange(year)  %>% 
+  mutate(e65_change = e65 - lag(e65))  %>% 
+  filter(year ==2010)  %>% 
+  ggplot(data=.) + 
+  geom_point(aes(x=e65, y=e65_change)) + 
+  facet_wrap(~ sex) + 
+  geom_smooth(aes(x=e65, y=e65_change), method="lm") + 
+  geom_hline(xintercept=0, linetype="dashed")
+
   
 
