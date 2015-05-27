@@ -313,8 +313,8 @@ coeffs_e50 %>%
   labs(x="Year", y="Coefficient on gradient for change in e50") 
 
 ggsave(file="figures/coef_gradient_e50.png",
-       height=5, width=5, dpi=300
-       )
+       height=10, width=15, dpi=300, unit="cm"
+)
 
 
 fn <- function(x){
@@ -339,7 +339,7 @@ coeffs_e65 %>%
   labs(x="Year", y="Coefficient on gradient for change in e65") 
 
 ggsave(file="figures/coef_gradient_e65.png",
-       height=5, width=5, dpi=300
+       height=10, width=15, dpi=300, unit="cm"
 )
 
             
@@ -365,7 +365,7 @@ coeffs_e80 %>%
   labs(x="Year", y="Coefficient on gradient for change in e80") 
 
 ggsave(file="figures/coef_gradient_e80.png",
-       height=5, width=5, dpi=300
+       height=10, width=15, dpi=300, unit="cm"
 )
 
 
