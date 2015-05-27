@@ -139,7 +139,7 @@ fn <- function(X){
   
   X <- X %>%
     mutate(adj_cmr = (deaths + 0.5) / (population + 0.5))
->>>>>>> c2f66ec2023084db7dba0a916be157e0dbf4c91b
+
   
   c_35 <- X %>%
     filter(age >=35) %>%
@@ -245,6 +245,127 @@ dta  %>%
   coord_cartesian(ylim=c(-2.5,2.5)) +
   labs(x="life expectancy at age 65",y="change in life expectancy\nat age 65 from previous year")
 
-ggsave(file="figures/change_in_le_against_le.png",
+ggsave(file="figures/delta_e65_vs_e65.png",
        height=20, width=20, units="cm", dpi=300 
        )
+
+
+dta  %>% 
+  group_by(sex, la)  %>% 
+  arrange(year)  %>% 
+  mutate(e80_change = e80 - lag(e80))  %>% 
+  filter(year >=2003) %>%
+  ggplot(data=.) + 
+  geom_point(aes(x=e80, y=e80_change, group=sex, colour=sex), alpha=0.2) + 
+  facet_wrap(~year) + 
+  geom_smooth(aes(x=e80, y=e80_change, group=sex, colour=sex), size=1.2, method="lm") + 
+  geom_hline(xintercept=0, linetype="dashed") +
+  coord_cartesian(ylim=c(-2.5,2.5)) +
+  labs(x="life expectancy at age 80",y="change in life expectancy\nat age 80 from previous year")
+
+ggsave(file="figures/delta_e80_vs_e80.png",
+       height=20, width=20, units="cm", dpi=300 
+)
+
+
+
+dta  %>% 
+  group_by(sex, la)  %>% 
+  arrange(year)  %>% 
+  mutate(e50_change = e50 - lag(e50))  %>% 
+  filter(year >=2003) %>%
+  ggplot(data=.) + 
+  geom_point(aes(x=e50, y=e50_change, group=sex, colour=sex), alpha=0.2) + 
+  facet_wrap(~year) + 
+  geom_smooth(aes(x=e50, y=e50_change, group=sex, colour=sex), size=1.2, method="lm") + 
+  geom_hline(xintercept=0, linetype="dashed") +
+  coord_cartesian(ylim=c(-2.5,2.5)) +
+  labs(x="life expectancy at age 50",y="change in life expectancy\nat age 50 from previous year")
+
+ggsave(file="figures/delta_e50_vs_e50.png",
+       height=20, width=20, units="cm", dpi=300 
+)
+
+
+
+# Gradients of change ? ---------------------------------------------------
+
+fn <- function(x){
+  tmp <- lm(e50_change ~ e50, data=x)
+  out <- as.double(coefficients(tmp)["e50"])
+  return(out)
+}
+
+coeffs_e50 <- dta %>%
+  group_by(sex, la) %>%
+  arrange(year) %>%
+  mutate(e50_change = e50-lag(e50)) %>%
+  filter(year >=2003) %>%
+  ungroup %>%
+  ddply(., .(sex, year), fn)
+
+
+coeffs_e50 %>%  
+  rename(coef = V1) %>%
+  ggplot(data=.) +
+  geom_bar(aes(x=year, y=coef), stat="identity") + 
+  facet_wrap(~ sex) + 
+  labs(x="Year", y="Coefficient on gradient for change in e50") 
+
+ggsave(file="figures/coef_gradient_e50.png",
+       height=5, width=5, dpi=300
+       )
+
+
+fn <- function(x){
+  tmp <- lm(e65_change ~ e65, data=x)
+  out <- as.double(coefficients(tmp)["e65"])
+  return(out)
+}
+
+coeffs_e65 <- dta %>%
+  group_by(sex, la) %>%
+  arrange(year) %>%
+  mutate(e65_change = e65-lag(e65)) %>%
+  filter(year >=2003) %>%
+  ungroup %>%
+  ddply(., .(sex, year), fn)
+
+coeffs_e65 %>%  
+  rename(coef = V1) %>%
+  ggplot(data=.) +
+  geom_bar(aes(x=year, y=coef), stat="identity") + 
+  facet_wrap(~ sex) + 
+  labs(x="Year", y="Coefficient on gradient for change in e65") 
+
+ggsave(file="figures/coef_gradient_e65.png",
+       height=5, width=5, dpi=300
+)
+
+            
+fn <- function(x){
+  tmp <- lm(e80_change ~ e80, data=x)
+  out <- as.double(coefficients(tmp)["e80"])
+  return(out)
+}
+
+coeffs_e80 <- dta %>%
+  group_by(sex, la) %>%
+  arrange(year) %>%
+  mutate(e80_change = e80-lag(e80)) %>%
+  filter(year >=2003) %>%
+  ungroup %>%
+  ddply(., .(sex, year), fn)
+
+coeffs_e80 %>%  
+  rename(coef = V1) %>%
+  ggplot(data=.) +
+  geom_bar(aes(x=year, y=coef), stat="identity") + 
+  facet_wrap(~ sex) + 
+  labs(x="Year", y="Coefficient on gradient for change in e80") 
+
+ggsave(file="figures/coef_gradient_e80.png",
+       height=5, width=5, dpi=300
+)
+
+
