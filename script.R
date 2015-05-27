@@ -236,10 +236,15 @@ dta  %>%
   group_by(sex, la)  %>% 
   arrange(year)  %>% 
   mutate(e65_change = e65 - lag(e65))  %>% 
-  filter(year ==2010)  %>% 
+  filter(year >=2003) %>%
   ggplot(data=.) + 
-  geom_point(aes(x=e65, y=e65_change)) + 
-  facet_wrap(~ sex) + 
-  geom_smooth(aes(x=e65, y=e65_change), method="lm") + 
-  geom_hline(xintercept=0, linetype="dashed")
+  geom_point(aes(x=e65, y=e65_change, group=sex, colour=sex), alpha=0.2) + 
+  facet_wrap(~year) + 
+  geom_smooth(aes(x=e65, y=e65_change, group=sex, colour=sex), size=1.2, method="lm") + 
+  geom_hline(xintercept=0, linetype="dashed") +
+  coord_cartesian(ylim=c(-2.5,2.5)) +
+  labs(x="life expectancy at age 65",y="change in life expectancy\nat age 65 from previous year")
 
+ggsave(file="figures/change_in_le_against_le.png",
+       height=20, width=20, units="cm", dpi=300 
+       )
