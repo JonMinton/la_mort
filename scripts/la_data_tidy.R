@@ -1,8 +1,6 @@
 # Title: local authority mortality rate exploration -----------------------
 
-
 rm(list=ls())
-
 
 
 # pre-requisites ----------------------------------------------------------
@@ -17,25 +15,82 @@ require(ggplot2)
 require(lattice)
 
 
-# Create tidy data (Run once only) --------------------------------------------------------------------
-# 
-# dta <- read.csv("data/unzipped/MYEB2_detailed_components_of_change_series_EW_(0213).csv") %>%
-#   tbl_df
-# 
-# 
-# data_tidied <- dta  %>% 
-#   gather(key=label, value=count, -lad2013_code, -lad2013_name, -country, -sex, -age)  %>% 
-#   mutate(
-#     year = str_extract(label, "\\d{1,4}"), 
-#     category = str_replace(str_extract(label, "\\D*"), "_$", ""),
-#     sex=ifelse(sex==1, "male", "female"))   %>% 
-#   select(lad2013_code, country, sex, age, year, category, count) %>%
-#   spread(category, count)
-# 
-# write.csv(data_tidied, file="data/tidied/england_la_count.csv", row.names=FALSE)
-# 
+dta_09 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2009.csv") %>% tbl_df
+dta_09 %>% gather(key=type, value=amount, -E.code, -Local.authority, -Region, -Class)
+dta_09_long <- dta_09 %>% 
+  gather(key=type, value=amount, -E.code, -Local.authority, -Region, -Class) %>% 
+  mutate(
+    start_year = 2009,
+    amount=as.numeric(str_replace_all(amount, ",", "")), 
+    type=str_replace_all(type, "\\.", " ")
+    ) 
+  
+dta_10 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2010.csv") %>% tbl_df
 
-# e50, e65 and e80 by la, year and age ------------------------------------
+dta_10_long <- dta_10 %>% 
+  select(-X, -X.1) %>% 
+  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
+  mutate(
+    start_year = 2010, 
+    amount = as.numeric(str_replace_all(amount, ",", "")),
+    type=str_replace_all(type, "\\.", " ")
+  )
+
+
+dta_11 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2011.csv") %>% tbl_df
+
+dta_11_long <- dta_11 %>% 
+  select(-X) %>% 
+  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
+  mutate(
+    start_year = 2011, 
+    amount = as.numeric(str_replace_all(amount, ",", "")),
+    type=str_replace_all(type, "\\.", " ")
+         ) %>% 
+  filter(!is.na(amount))
+  
+dta_12 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2012.csv") %>% tbl_df
+
+dta_12_long <- dta_12 %>% 
+  select(-X) %>% 
+  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
+  mutate(
+    start_year = 2012, 
+    amount = as.numeric(str_replace_all(amount, ",", "")),
+    type=str_replace_all(type, "\\.", " ")
+  ) %>% 
+  filter(!is.na(amount))
+
+dta_13 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2013.csv") %>% tbl_df
+
+dta_13_long <- dta_13%>% 
+  select(-X) %>% 
+  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
+  mutate(
+    start_year = 2013, 
+    amount = as.numeric(str_replace_all(amount, ",", "")),
+    type=str_replace_all(type, "\\.", " ")
+  ) %>% 
+  filter(!is.na(amount))
+
+#merge together
+
+dta_all_long <- dta_09_long %>% 
+  select(-Region) %>% 
+  bind_rows(
+    dta_10_long, dta_11_long, 
+    dta_12_long, dta_13_long
+  )
+
+# now to link to English LA codes 
+
+la_codes <- read.csv("data/support/lookups_between_ons_and_ecodes.csv") %>% tbl_df
+  
+dta_all_linked <- la_codes %>% 
+  select(E.code=ecode, ons_code, ons_region_name)  %>% 
+  left_join(dta_all_long) %>% 
+  filter(str_detect(ons_code, "^E"))
+
 
 
 data <- read.csv("data/tidied/england_la_count.csv") %>%
