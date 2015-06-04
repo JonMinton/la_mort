@@ -91,21 +91,40 @@ dta_all_linked <- la_codes %>%
   left_join(dta_all_long) %>% 
   filter(str_detect(ons_code, "^E"))
 
+# Now to look at social care budget only
 
-
-data <- read.csv("data/tidied/england_la_count.csv") %>%
-  tbl_df
-
-ex <- data  %>% 
-  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
-  group_by(sex, la, year)  %>% 
-  summarise(
-    e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
-    e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
-    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
+dta_social_care <- dta_all_linked %>% 
+  filter(type %in%
+    c(
+      "Adult Social Care",
+      "Children Social Care",
+      "Social care"
     )
+  ) 
 
-write.csv(ex, file="data/tidied/england_ex.csv", row.names=FALSE)
+dta_social_care <- dta_social_care %>% 
+  spread(type, amount) %>% 
+  mutate(
+    social_care = ifelse(
+      !is.na(`Social care`), 
+      `Social care`,
+      `Adult Social Care` + `Children Social Care`
+      )
+    ) %>% 
+  select(
+    -`Social care`,
+    -`Adult Social Care`,
+    -`Children Social Care`
+  )
+
+dta_social_care %>%
+  group_by(E.code) %>% 
+  mutate(soc_care_index = 100 *social_care / social_care[start_year==2009]) %>% 
+  ggplot(data=.) +
+  geom_line(aes(x=start_year, y=soc_care_index, group=E.code), alpha=0.1) +
+  coord_cartesian(ylim=c(0, 250)) + 
+  stat_smooth(aes(x=start_year, y=soc_care_index), method="lm")
+
 
 
 # Cumulative survival from ages 50, 65 and 80 -----------------------------
