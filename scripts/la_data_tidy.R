@@ -15,6 +15,36 @@ require(ggplot2)
 require(lattice)
 
 
+
+# Data on mort in LAs -----------------------------------------------------
+
+
+data <- read.csv("data/tidied/england_la_count.csv") %>%
+  tbl_df
+
+# Remove Isle of Scilly (E06000053)
+# and City of London (E09000001)
+# as populations sizes are very small
+
+data <- data %>% 
+  filter(
+    !(lad2013_code %in% c("E06000053", "E09000001"))
+  )
+
+ex <- data  %>% 
+  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
+  group_by(sex, la, year)  %>% 
+  summarise(
+    e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
+    e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
+    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
+  )
+
+
+
+# Data on expenditure -----------------------------------------------------
+
+
 dta_09 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2009.csv") %>% tbl_df
 dta_09 %>% gather(key=type, value=amount, -E.code, -Local.authority, -Region, -Class)
 dta_09_long <- dta_09 %>% 
@@ -91,30 +121,43 @@ dta_all_linked <- la_codes %>%
   left_join(dta_all_long) %>% 
   filter(str_detect(ons_code, "^E"))
 
+# Now to look at social care budget only
 
+dta_social_care <- dta_all_linked %>% 
+  filter(type %in%
+    c(
+      "Adult Social Care",
+      "Children Social Care",
+      "Social care"
+    )
+  ) 
 
-data <- read.csv("data/tidied/england_la_count.csv") %>%
-  tbl_df
-
-# Remove Isle of Scilly (E06000053)
-# and City of London (E09000001)
-# as populations sizes are very small
-
-data <- data %>% 
-  filter(
-    !(lad2013_code %in% c("E06000053", "E09000001"))
+dta_social_care <- dta_social_care %>% 
+  spread(type, amount) %>% 
+  mutate(
+    social_care = ifelse(
+      !is.na(`Social care`), 
+      `Social care`,
+      `Adult Social Care` + `Children Social Care`
+      )
+    ) %>% 
+  select(
+    -`Social care`,
+    -`Adult Social Care`,
+    -`Children Social Care`
   )
 
-ex <- data  %>% 
-  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
-  group_by(sex, la, year)  %>% 
-  summarise(
-    e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
-    e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
-    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
-    )
 
-write.csv(ex, file="data/tidied/england_ex.csv", row.names=FALSE)
+
+dta_social_care %>%
+  group_by(E.code) %>% 
+  mutate(soc_care_index = 100 *social_care / social_care[start_year==2009]) %>% 
+  ggplot(data=.) +
+  geom_line(aes(x=start_year, y=soc_care_index, group=E.code), alpha=0.1) +
+  coord_cartesian(ylim=c(0, 250)) + 
+  stat_smooth(aes(x=start_year, y=soc_care_index), method="lm")
+
+
 
 
 # Cumulative survival from ages 50, 65 and 80 -----------------------------
