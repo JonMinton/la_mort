@@ -96,6 +96,15 @@ dta_all_linked <- la_codes %>%
 data <- read.csv("data/tidied/england_la_count.csv") %>%
   tbl_df
 
+# Remove Isle of Scilly (E06000053)
+# and City of London (E09000001)
+# as populations sizes are very small
+
+data <- data %>% 
+  filter(
+    !(lad2013_code %in% c("E06000053", "E09000001"))
+  )
+
 ex <- data  %>% 
   select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
   group_by(sex, la, year)  %>% 
@@ -420,5 +429,4 @@ coeffs_e80 %>%
 ggsave(file="figures/coef_gradient_e80.png",
        height=10, width=15, dpi=300, unit="cm"
 )
-
 
