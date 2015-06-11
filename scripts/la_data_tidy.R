@@ -14,7 +14,7 @@ require(dplyr)
 require(ggplot2)
 require(lattice)
 
-
+require(readxl)
 
 # Data on mort in LAs -----------------------------------------------------
 
@@ -44,118 +44,187 @@ ex <- data  %>%
 
 # Data on expenditure -----------------------------------------------------
 
-
-dta_09 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2009.csv") %>% tbl_df
-dta_09 %>% gather(key=type, value=amount, -E.code, -Local.authority, -Region, -Class)
-dta_09_long <- dta_09 %>% 
-  gather(key=type, value=amount, -E.code, -Local.authority, -Region, -Class) %>% 
-  mutate(
-    start_year = 2009,
-    amount=as.numeric(str_replace_all(amount, ",", "")), 
-    type=str_replace_all(type, "\\.", " ")
-    ) 
-  
-dta_10 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2010.csv") %>% tbl_df
-
-dta_10_long <- dta_10 %>% 
-  select(-X, -X.1) %>% 
-  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
-  mutate(
-    start_year = 2010, 
-    amount = as.numeric(str_replace_all(amount, ",", "")),
-    type=str_replace_all(type, "\\.", " ")
+raw_08_09 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2008-09_by_LA_-_Revised_17-Nov-2011.xls", 
+  sheet="RO3 LA Data 2008-09", 
+  skip = 3, 
+  col_names = FALSE
   )
 
+raw_09_10 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/RO3 [Revenue Outturn RO3 data 2009-10 by LA nd].xls",
+  skip = 4,
+  sheet="RO3 LA Data 2009-10",
+  col_names= FALSE
+)
 
-dta_11 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2011.csv") %>% tbl_df
+raw_10_11 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2010-11_by_LA_-_27-Nov-2012-v2.xls",
+  sheet= "RO3 LA Data 2010-11",
+  skip = 4,
+  col_names = FALSE
+)
 
-dta_11_long <- dta_11 %>% 
-  select(-X) %>% 
-  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
-  mutate(
-    start_year = 2011, 
-    amount = as.numeric(str_replace_all(amount, ",", "")),
-    type=str_replace_all(type, "\\.", " ")
-         ) %>% 
-  filter(!is.na(amount))
+raw_11_12 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2011-12_by_LA_-_Revised_28-Nov-2013.xls",
+  sheet= "RO3 LA Data 2011-12",
+  skip = 4,
+  col_names = FALSE
+)
+
+raw_12_13 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2012-13_by_LA__Revised__-_18-Feb-2014.xls",
+  sheet= "RO3 LA Data 2012-13",
+  skip = 4,
+  col_names = FALSE
+)
+
+raw_12_13 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2012-13_by_LA__Revised__-_18-Feb-2014.xls",
+  sheet= "RO3 LA Data 2012-13",
+  skip = 4,
+  col_names = FALSE
+)
+
+raw_13_14a <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
+  sheet= "RO3 LA Data 2013-14 (1)",
+  col_names = FALSE
+)
+
+raw_13_14b <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
+  sheet= "RO3 LA Data 2013-14 (2)",
+  col_names = FALSE
+)
+
+raw_13_14c <- read_excel(
+  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
+  sheet= "RO3 LA Data 2013-14 (3)",
+  col_names = FALSE
+)
+
+
+# For each col, want to split rows into metadata part and data part
+
+split_in_two <- function(x, split_row){
+  comment_part <- x[1:split_row, ]
+  data_part <- x[(split_row+1):dim(x)[1],]
   
-dta_12 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2012.csv") %>% tbl_df
+  fn <- function(xx){
+    yy <- paste(xx, collapse= " ")
+    yy <- yy %>% 
+      str_replace_all(. , pattern = "NA", "") %>%
+      str_trim()
+    
+    return(yy)
+  }
+  
+  comment_part <- apply(comment_part, 2, fn)
+  
+  output <- data_part
+  names(output) <- comment_part
+  
+  return(output)
 
-dta_12_long <- dta_12 %>% 
-  select(-X) %>% 
-  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
-  mutate(
-    start_year = 2012, 
-    amount = as.numeric(str_replace_all(amount, ",", "")),
-    type=str_replace_all(type, "\\.", " ")
-  ) %>% 
-  filter(!is.na(amount))
+}
 
-dta_13 <- read.csv("data/care_cuts/for_r/expenditure_financial_year_2013.csv") %>% tbl_df
+#
 
-dta_13_long <- dta_13%>% 
-  select(-X) %>% 
-  gather(key=type, value=amount, -E.code, -Local.authority, -Class) %>% 
-  mutate(
-    start_year = 2013, 
-    amount = as.numeric(str_replace_all(amount, ",", "")),
-    type=str_replace_all(type, "\\.", " ")
-  ) %>% 
-  filter(!is.na(amount))
+mid_08_09 <- split_in_two(raw_08_09, 7)
+mid_09_10 <- split_in_two(raw_09_10, 7)
+mid_10_11 <- split_in_two(raw_10_11, 7)
+mid_11_12 <- split_in_two(raw_11_12, 7)
+mid_12_13 <- split_in_two(raw_12_13, 7)
+mid_13_14a <- split_in_two(raw_13_14a, 14)
+mid_13_14b <- split_in_two(raw_13_14b, 14)
+mid_13_14c <- split_in_two(raw_13_14c, 14)
 
-#merge together
 
-dta_all_long <- dta_09_long %>% 
-  select(-Region) %>% 
-  bind_rows(
-    dta_10_long, dta_11_long, 
-    dta_12_long, dta_13_long
-  )
 
-# now to link to English LA codes 
+# for each of the above, am interested in number of employees and total expenditure in adult social services 
+
+tidy_08_09 <- mid_08_09 %>% 
+  select(
+    `ecode` = `£ thousand     E-code`,
+    `children` = `Social Care strategy - children   TOTAL EXPENDITURE (Col 1+2)`,
+    `older` = `Older people (aged 65 or over) including older mentally ill    TOTAL EXPENDITURE (Col 1+2)`,
+    `total` = `TOTAL SOCIAL CARE*   TOTAL EXPENDITURE (Col 1+2)`
+    ) %>% tbl_df
+
+
+tidy_09_10 <- mid_09_10[, c(1, 7, 34, 43)] %>% tbl_df
+names(tidy_09_10) <- c("ecode", "children", "adult", "older")
+
+tidy_10_11 <- mid_10_11[, c(1, 6, 33, 42)] %>% tbl_df
+names(tidy_10_11) <- c("ecode", "children", "adult", "older")
+
+tidy_11_12 <- mid_11_12[,c(1, 6, 78, 87)] %>% tbl_df
+names(tidy_11_12) <- c("ecode", "children", "adult", "older")
+
+
+tidy_12_13 <- mid_12_13[, c(1, 6, 87, 96)] %>% tbl_df
+names(tidy_12_13) <- c("ecode", "children", "adult", "older")
+
+tidy_13_14 <- mid_13_14a[,c(1, 6, 33, 36)] %>% tbl_df
+names(tidy_13_14) <- c("ecode", "children", "adult", "older")
+
+
+
+tidy_08_09 <- tidy_08_09 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2008)
+
+tidy_08_09 <- tidy_08_09 %>% 
+  mutate(adult = total - older - children) %>% 
+  select(start_year, ecode, children, adult, older)
+
+tidy_09_10 <- tidy_09_10 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2009) %>% 
+  select(start_year, ecode, children, adult, older)
+
+
+tidy_10_11 <- tidy_10_11 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2010) %>% 
+  select(start_year, ecode, children, adult, older)
+
+
+tidy_11_12 <- tidy_11_12 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2011) %>% 
+  select(start_year, ecode, children, adult, older)
+
+tidy_12_13 <- tidy_12_13 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2012) %>% 
+  select(start_year, ecode, children, adult, older)
+
+tidy_13_14 <- tidy_13_14 %>% 
+  mutate_each(funs(as.numeric), -ecode) %>% 
+  mutate(start_year = 2013) %>% 
+  select(start_year, ecode, children, adult, older)
+
+
+tidy_ro3 <- tidy_08_09 %>% 
+  bind_rows(tidy_09_10) %>% 
+  bind_rows(tidy_10_11) %>% 
+  bind_rows(tidy_11_12) %>% 
+  bind_rows(tidy_12_13) %>% 
+  bind_rows(tidy_13_14)
+
+
 
 la_codes <- read.csv("data/support/lookups_between_ons_and_ecodes.csv") %>% tbl_df
   
-dta_all_linked <- la_codes %>% 
-  select(E.code=ecode, ons_code, ons_region_name)  %>% 
-  left_join(dta_all_long) %>% 
+tidy_linked_ro3 <- la_codes %>% 
+  select(ecode, ons_code, ons_region_name)  %>% 
+  left_join(tidy_ro3) %>% 
   filter(str_detect(ons_code, "^E"))
 
-# Now to look at social care budget only
 
-dta_social_care <- dta_all_linked %>% 
-  filter(type %in%
-    c(
-      "Adult Social Care",
-      "Children Social Care",
-      "Social care"
-    )
-  ) 
-
-dta_social_care <- dta_social_care %>% 
-  spread(type, amount) %>% 
-  mutate(
-    social_care = ifelse(
-      !is.na(`Social care`), 
-      `Social care`,
-      `Adult Social Care` + `Children Social Care`
-      )
-    ) %>% 
-  select(
-    -`Social care`,
-    -`Adult Social Care`,
-    -`Children Social Care`
-  )
-
-
-
-dta_social_care %>%
-  group_by(E.code) %>% 
-  mutate(soc_care_index = 100 *social_care / social_care[start_year==2009]) %>% 
-  ggplot(data=.) +
-  geom_line(aes(x=start_year, y=soc_care_index, group=E.code), alpha=0.1) +
-  coord_cartesian(ylim=c(0, 250)) + 
-  stat_smooth(aes(x=start_year, y=soc_care_index), method="lm")
+write.csv(tidy_linked_ro3, file="data/tidied/linked_r03.csv", row.names=F)
 
 
 
