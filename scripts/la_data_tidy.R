@@ -141,6 +141,43 @@ mid_13_14b <- split_in_two(raw_13_14b, 14)
 mid_13_14c <- split_in_two(raw_13_14c, 14)
 
 
+long_08 <- mid_08_09 %>% 
+  rename(ecode =    `£ thousand     E-code`) %>% 
+  select( - `Local authority`, -Class) %>% 
+  gather(key="type", value="amount", -ecode) %>% 
+  mutate(start_year = 2008) %>% 
+  select(start_year, ecode, type, amount)
+
+
+long_09 <- mid_09_10 %>% 
+  gather(key="type", value="amount", -`E-code`) %>% 
+  rename(ecode = `E-code`) %>% 
+  filter(!(type %in% c("Local authority", "Class", "Region"))) %>% 
+  mutate(start_year = 2009) %>% 
+  select(start_year, ecode, type, amount)
+
+long_10 <- mid_10_11 %>% 
+  gather(key="type", value="amount", -`E-code`) %>% 
+  rename(ecode = `E-code`) %>% 
+  filter(!(type %in% c("Local authority", "Class"))) %>% 
+  mutate(start_year = 2010) %>% 
+  select(start_year, ecode, type, amount)
+
+long_11 <-  mid_11_12 %>% 
+  gather(key="type", value="amount", -`E-code`) %>% 
+  rename(ecode = `E-code`) %>% 
+  filter(!(type %in% c("Local authority", "Class"))) %>% 
+  mutate(start_year = 2011) %>% 
+  select(start_year, ecode, type, amount)
+
+long_12 <- mid_12_13 %>% 
+  gather(key="type", value="amount", -`E-code`) %>% 
+  rename(ecode = `E-code`) %>% 
+  filter(!(type %in% c("Local authority", "Class"))) %>% 
+  mutate(start_year = 2012) %>% 
+  select(start_year, ecode, type, amount)
+
+long_13 mid_13_14a
 
 # for each of the above, am interested in number of employees and total expenditure in adult social services 
 
