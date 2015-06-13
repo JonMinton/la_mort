@@ -44,19 +44,74 @@ ex <- data  %>%
 
 # Data on expenditure -----------------------------------------------------
 
-raw_08_09 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2008-09_by_LA_-_Revised_17-Nov-2011.xls", 
-  sheet="RO3 LA Data 2008-09", 
-  skip = 3, 
-  col_names = FALSE
+
+
+raw_08 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2008"
   )
 
-raw_09_10 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/RO3 [Revenue Outturn RO3 data 2009-10 by LA nd].xls",
-  skip = 4,
-  sheet="RO3 LA Data 2009-10",
-  col_names= FALSE
+raw_09 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2009"
 )
+
+raw_10 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2010"
+)
+
+raw_11 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2011"
+)
+
+raw_12 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2012"
+)
+
+raw_13 <- read_excel(
+  "data/care_cuts/Expenditure/RO3/combined.xlsx", 
+  sheet="flat_2013"
+)
+
+long_08 <- raw_08 %>% select(-`Local authority`, -`Class`) %>% 
+     gather(key="type", value="amount", -start_year, -`E-code`) %>% 
+     separate(col = type, into = c("lvl1", "lvl2"), sep = "\\|")
+
+long_09 <- raw_09 %>% select(-`Local authority`, -`Class`, -Region) %>% 
+  gather(key="type", value="amount", -Start_year, -`E-code`) %>% 
+  separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
+
+long_10 <- raw_10 %>% select(-`NA`, -Class, -`Local authority` ) %>% 
+  gather(key="type", value = "amount", -start_year, -`E-code`) %>% 
+  separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
+
+long_11 <- raw_11[,!duplicated(names(raw_11))] %>% 
+  select(-`Class`, -`Local authority`) %>% 
+  gather(key="type", value="amount", -start_year, - `E-code`) %>% 
+  separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
+  
+long_12 <- raw_12  %>% 
+  select(-`Class`, -`Local authority`) %>% 
+  gather(key="type", value="amount", -start_year, - `E-code`) %>% 
+  separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
+
+long_13 <- raw_13 %>% 
+  select(-`Class`, -`Local authority`) %>% 
+  gather(key="type", value="amount", -start_year, - `E-code`) %>% 
+  separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
+
+
+
+
+
+gather(key="type", value = "amount", -start_year, -`E-code`) %>% 
+  separate(col=type, into=c("lvl1", "lvl2", "lvl3"), sep="\\|")
+
+
+
 
 raw_10_11 <- read_excel(
   "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2010-11_by_LA_-_27-Nov-2012-v2.xls",
@@ -177,7 +232,18 @@ long_12 <- mid_12_13 %>%
   mutate(start_year = 2012) %>% 
   select(start_year, ecode, type, amount)
 
-long_13 mid_13_14a
+long_13 <- mid_13_14a  %>% 
+  gather(key="type", value="amount", -1)  
+names(long_13)[1] <- "ecode"
+long_13 <- long_13 %>% 
+  filter(!(type %in% c("Local authority", "Class"))) %>% 
+  mutate(start_year = 2013) %>% 
+  select(start_year, ecode, type, amount)
+
+long_08
+"Social Care strategy - children   TOTAL EXPENDITURE (Col 1+2)"
+
+
 
 # for each of the above, am interested in number of employees and total expenditure in adult social services 
 
