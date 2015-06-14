@@ -10,36 +10,13 @@ require(plyr)
 require(stringr)
 require(tidyr)
 require(dplyr)
+require(car)
+
 
 require(ggplot2)
 require(lattice)
 
 require(readxl)
-
-# Data on mort in LAs -----------------------------------------------------
-
-
-data <- read.csv("data/tidied/england_la_count.csv") %>%
-  tbl_df
-
-# Remove Isle of Scilly (E06000053)
-# and City of London (E09000001)
-# as populations sizes are very small
-
-data <- data %>% 
-  filter(
-    !(lad2013_code %in% c("E06000053", "E09000001"))
-  )
-
-ex <- data  %>% 
-  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
-  group_by(sex, la, year)  %>% 
-  summarise(
-    e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
-    e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
-    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
-  )
-
 
 
 # Data on expenditure -----------------------------------------------------
@@ -104,232 +81,412 @@ long_13 <- raw_13 %>%
   separate(col=type, into=c("main_group", "sub_group", "expense_type"), sep="\\|")
 
 
+# 2008, outer
+tidy_08 <- long_08
+tidy_08$lvl1 <- str_trim(tidy_08$lvl1)
+tidy_08$outer <- NA
+tidy_08$outer[str_detect(tidy_08$lvl1, "[Cc]hildren")] <- "Children"
+tidy_08$outer[str_detect(tidy_08$lvl1, "[Aa]dult|aged 65|employ")] <- "Adults"
+
+
+#2009, outer
+tidy_09 <- long_09
+tidy_09$main_group <- str_trim(tidy_09$main_group)
+tidy_09$sub_group <- str_trim(tidy_09$sub_group)
+tidy_09$outer <- NA
+tidy_09$outer[str_detect(tidy_09$main_group, "Adult")] <- "Adults"
+tidy_09$outer[str_detect(tidy_09$main_group, "Children")] <- "Children"
+
+
+#2010, outer
+tidy_10 <- long_10
+tidy_10$main_group <- str_trim(tidy_10$main_group)
+tidy_10$sub_group <- str_trim(tidy_10$sub_group)
+tidy_10$outer <- NA
+tidy_10$outer[str_detect(tidy_10$main_group, "Adult")] <- "Adults"
+tidy_10$outer[str_detect(tidy_10$main_group, "Children")] <- "Children"
+
+#2011, outer
+tidy_11 <- long_11
+tidy_11$main_group <- str_trim(tidy_11$main_group)
+tidy_11$sub_group <- str_trim(tidy_11$sub_group)
+tidy_11$outer <- NA
+tidy_11$outer[str_detect(tidy_11$main_group, "Adult")] <- "Adults"
+tidy_11$outer[str_detect(tidy_11$main_group, "Children")] <- "Children"
+
+#2012, outer
+tidy_12 <- long_12
+tidy_12$main_group <- str_trim(tidy_12$main_group)
+tidy_12$sub_group <- str_trim(tidy_12$sub_group)
+tidy_12$outer <- NA
+tidy_12$outer[str_detect(tidy_12$main_group, "Adult")] <- "Adults"
+tidy_12$outer[str_detect(tidy_12$main_group, "Children")] <- "Children"
+
+#2013, outer
+tidy_13 <- long_13
+tidy_13$main_group <- str_trim(tidy_13$main_group)
+tidy_13$sub_group <- str_trim(tidy_13$sub_group)
+tidy_13$outer <- NA
+tidy_13$outer[str_detect(tidy_13$main_group, "Adult")] <- "Adults"
+tidy_13$outer[str_detect(tidy_13$main_group, "Children")] <- "Children"
 
 
 
-gather(key="type", value = "amount", -start_year, -`E-code`) %>% 
-  separate(col=type, into=c("lvl1", "lvl2", "lvl3"), sep="\\|")
+#2008, inner
+tidy_08$inner <- NA
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[cC]hildren") &
+  str_detect(tidy_08$lvl1, "[Aa]sylum") ] <- "children_asylum_seekers"
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[cC]hildren") &
+    str_detect(tidy_08$lvl1, "Social Care") ] <- "children_social_care"
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[cC]hildren") &
+    str_detect(tidy_08$lvl1, "[Oo]ther") ] <- "children_other"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[Aa]dult") &
+    str_detect(tidy_08$lvl1, "under 65") &
+    str_detect(tidy_08$lvl1, "learning") ] <- "adults_u65_learning"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[Aa]dult") &
+    str_detect(tidy_08$lvl1, "under 65") &
+    str_detect(tidy_08$lvl1, "mental") ] <- "adults_u65_mental"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[Aa]dult") &
+    str_detect(tidy_08$lvl1, "under 65") &
+    str_detect(tidy_08$lvl1, "physical") ] <- "adults_u65_physical"
+
+tidy_08$inner[
+    str_detect(tidy_08$lvl1, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[Aa]dult") &
+    str_detect(tidy_08$lvl1, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[Aa]dult") &
+    str_detect(tidy_08$lvl1, "other$") ] <- "adults_u65_other"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_08$inner[
+  str_detect(tidy_08$lvl1, "[sS]ocial [cC]are") &
+    str_detect(tidy_08$lvl1, "adults$")
+  ] <- "adults_u65_social_care"
+
+
+# 2009, inner
+tidy_09$inner <- NA
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[cC]hildren") &
+    str_detect(tidy_09$sub_group, "[Aa]sylum") ] <- "children_asylum_seekers"
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[cC]hildren") &
+    str_detect(tidy_09$sub_group, "[sS]ocial [cC]are") ] <- "children_social_care"
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[cC]hildren") &
+    str_detect(tidy_09$sub_group, "[Oo]ther") ] <- "children_other"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[Aa]dult") &
+    str_detect(tidy_09$sub_group, "under 65") &
+    str_detect(tidy_09$sub_group, "learning") ] <- "adults_u65_learning"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[Aa]dult") &
+    str_detect(tidy_09$sub_group, "under 65") &
+    str_detect(tidy_09$sub_group, "mental") ] <- "adults_u65_mental"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[Aa]dult") &
+    str_detect(tidy_09$sub_group, "under 65") &
+    str_detect(tidy_09$sub_group, "physical") ] <- "adults_u65_physical"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[Aa]dult") &
+    str_detect(tidy_09$sub_group, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[Aa]dult") &
+    str_detect(tidy_09$sub_group, "other$") ] <- "adults_u65_other"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "[sS]ocial [cC]are") &
+    str_detect(tidy_09$sub_group, "adults$")
+  ] <- "adults_u65_social_care"
+
+tidy_09$inner[
+  str_detect(tidy_09$sub_group, "Supporting people") 
+  ] <- "supporting_people"
+
+
+# 2010, inner
+tidy_10$inner <- NA
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[cC]hildren") &
+    str_detect(tidy_10$sub_group, "[Aa]sylum") ] <- "children_asylum_seekers"
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[cC]hildren") &
+    str_detect(tidy_10$sub_group, "[sS]ocial [cC]are") ] <- "children_social_care"
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[cC]hildren") &
+    str_detect(tidy_10$sub_group, "[Oo]ther") ] <- "children_other"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[Aa]dult") &
+    str_detect(tidy_10$sub_group, "under 65") &
+    str_detect(tidy_10$sub_group, "learning") ] <- "adults_u65_learning"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[Aa]dult") &
+    str_detect(tidy_10$sub_group, "under 65") &
+    str_detect(tidy_10$sub_group, "mental") ] <- "adults_u65_mental"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[Aa]dult") &
+    str_detect(tidy_10$sub_group, "under 65") &
+    str_detect(tidy_10$sub_group, "physical") ] <- "adults_u65_physical"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[Aa]dult") &
+    str_detect(tidy_10$sub_group, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[Aa]dult") &
+    str_detect(tidy_10$sub_group, "other$") ] <- "adults_u65_other"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "[sS]ocial [cC]are") &
+    str_detect(tidy_10$sub_group, "adults$")
+  ] <- "adults_u65_social_care"
+
+tidy_10$inner[
+  str_detect(tidy_10$sub_group, "Supporting people") 
+  ] <- "supporting_people"
+
+
+# 2011, inner
+tidy_11$inner <- NA
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[cC]hildren") &
+    str_detect(tidy_11$sub_group, "[Aa]sylum Seekers$") ] <- "children_asylum_seekers"
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[cC]hildren") &
+    str_detect(tidy_11$sub_group, "[sS]ocial [cC]are")  &
+    !str_detect(tidy_11$sub_group, "[Aa]sylum Seekers$")] <- "children_social_care"
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[cC]hildren") &
+    str_detect(tidy_11$sub_group, "[Oo]ther") ] <- "children_other"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+    str_detect(tidy_11$sub_group, "under 65") &
+    str_detect(tidy_11$sub_group, "learning") ] <- "adults_u65_learning"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+    str_detect(tidy_11$sub_group, "under 65") &
+    str_detect(tidy_11$sub_group, "mental") ] <- "adults_u65_mental"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+    str_detect(tidy_11$sub_group, "under 65") &
+    str_detect(tidy_11$sub_group, "physical") ] <- "adults_u65_physical"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+    str_detect(tidy_11$sub_group, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+    str_detect(tidy_11$sub_group, "other$") ] <- "adults_u65_other"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[sS]ocial [cC]are") &
+    str_detect(tidy_11$sub_group, "adults$")
+  ] <- "adults_u65_social_care"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Aa]dult") &
+  str_detect(tidy_11$sub_group, "Supporting people") 
+  ] <- "adults_supporting_people"
+
+tidy_11$inner[
+  str_detect(tidy_11$sub_group, "[Cc]hildren") &
+    str_detect(tidy_11$sub_group, "Supporting people") 
+  ] <- "children_supporting_people"
+
+
+# 2012, inner
+tidy_12$inner <- NA
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[cC]hildren") &
+    str_detect(tidy_12$sub_group, "[Aa]sylum Seekers$") ] <- "children_asylum_seekers"
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[cC]hildren") &
+    str_detect(tidy_12$sub_group, "[sS]ocial [cC]are")  &
+    !str_detect(tidy_12$sub_group, "[Aa]sylum Seekers$")] <- "children_social_care"
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[cC]hildren") &
+    str_detect(tidy_12$sub_group, "[Oo]ther") ] <- "children_other"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "under 65") &
+    str_detect(tidy_12$sub_group, "learning") ] <- "adults_u65_learning"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "under 65") &
+    str_detect(tidy_12$sub_group, "mental") ] <- "adults_u65_mental"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "under 65") &
+    str_detect(tidy_12$sub_group, "physical") ] <- "adults_u65_physical"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "other$") ] <- "adults_u65_other"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[sS]ocial [cC]are") &
+    str_detect(tidy_12$sub_group, "adults$")
+  ] <- "adults_u65_social_care"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Aa]dult") &
+    str_detect(tidy_12$sub_group, "Supporting people") 
+  ] <- "adults_supporting_people"
+
+tidy_12$inner[
+  str_detect(tidy_12$sub_group, "[Cc]hildren") &
+    str_detect(tidy_12$sub_group, "Supporting people") 
+  ] <- "children_supporting_people"
+
+# 2013, inner
+tidy_13$inner <- NA
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[cC]hildren") &
+    str_detect(tidy_13$sub_group, "[Aa]sylum Seekers$") ] <- "children_asylum_seekers"
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[cC]hildren") &
+    str_detect(tidy_13$sub_group, "[sS]ocial [cC]are")  &
+    !str_detect(tidy_13$sub_group, "[Aa]sylum Seekers$")] <- "children_social_care"
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[cC]hildren") &
+    str_detect(tidy_13$sub_group, "[Oo]ther") ] <- "children_other"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "under 65") &
+    str_detect(tidy_13$sub_group, "learning") ] <- "adults_u65_learning"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "under 65") &
+    str_detect(tidy_13$sub_group, "mental") ] <- "adults_u65_mental"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "under 65") &
+    str_detect(tidy_13$sub_group, "physical") ] <- "adults_u65_physical"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "aged 65 or over") ] <- "adults_65plus"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "asylum") ] <- "adults_u65_asylum_seekers"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "other$") ] <- "adults_u65_other"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "Supported employment")
+  ] <- "adults_u65_supported_employment"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[sS]ocial [cC]are") &
+    str_detect(tidy_13$sub_group, "adults$")
+  ] <- "adults_u65_social_care"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Aa]dult") &
+    str_detect(tidy_13$sub_group, "Supporting people") 
+  ] <- "adults_supporting_people"
+
+tidy_13$inner[
+  str_detect(tidy_13$sub_group, "[Cc]hildren") &
+    str_detect(tidy_13$sub_group, "Supporting people") 
+  ] <- "children_supporting_people"  
+
+
+# NEXT TO DO: consistency w/ Expense Type
 
 
 
-
-raw_10_11 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2010-11_by_LA_-_27-Nov-2012-v2.xls",
-  sheet= "RO3 LA Data 2010-11",
-  skip = 4,
-  col_names = FALSE
-)
-
-raw_11_12 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2011-12_by_LA_-_Revised_28-Nov-2013.xls",
-  sheet= "RO3 LA Data 2011-12",
-  skip = 4,
-  col_names = FALSE
-)
-
-raw_12_13 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2012-13_by_LA__Revised__-_18-Feb-2014.xls",
-  sheet= "RO3 LA Data 2012-13",
-  skip = 4,
-  col_names = FALSE
-)
-
-raw_12_13 <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2012-13_by_LA__Revised__-_18-Feb-2014.xls",
-  sheet= "RO3 LA Data 2012-13",
-  skip = 4,
-  col_names = FALSE
-)
-
-raw_13_14a <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
-  sheet= "RO3 LA Data 2013-14 (1)",
-  col_names = FALSE
-)
-
-raw_13_14b <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
-  sheet= "RO3 LA Data 2013-14 (2)",
-  col_names = FALSE
-)
-
-raw_13_14c <- read_excel(
-  "data/care_cuts/Expenditure/RO3/Revenue_Outturn__RO3__data_2013-14_by_LA.xls",
-  sheet= "RO3 LA Data 2013-14 (3)",
-  col_names = FALSE
-)
+# Data on mort in LAs -----------------------------------------------------
 
 
-# For each col, want to split rows into metadata part and data part
+data <- read.csv("data/tidied/england_la_count.csv") %>%
+  tbl_df
 
-split_in_two <- function(x, split_row){
-  comment_part <- x[1:split_row, ]
-  data_part <- x[(split_row+1):dim(x)[1],]
-  
-  fn <- function(xx){
-    yy <- paste(xx, collapse= " ")
-    yy <- yy %>% 
-      str_replace_all(. , pattern = "NA", "") %>%
-      str_trim()
-    
-    return(yy)
-  }
-  
-  comment_part <- apply(comment_part, 2, fn)
-  
-  output <- data_part
-  names(output) <- comment_part
-  
-  return(output)
+# Remove Isle of Scilly (E06000053)
+# and City of London (E09000001)
+# as populations sizes are very small
 
-}
+data <- data %>% 
+  filter(
+    !(lad2013_code %in% c("E06000053", "E09000001"))
+  )
 
-#
-
-mid_08_09 <- split_in_two(raw_08_09, 7)
-mid_09_10 <- split_in_two(raw_09_10, 7)
-mid_10_11 <- split_in_two(raw_10_11, 7)
-mid_11_12 <- split_in_two(raw_11_12, 7)
-mid_12_13 <- split_in_two(raw_12_13, 7)
-mid_13_14a <- split_in_two(raw_13_14a, 14)
-mid_13_14b <- split_in_two(raw_13_14b, 14)
-mid_13_14c <- split_in_two(raw_13_14c, 14)
-
-
-long_08 <- mid_08_09 %>% 
-  rename(ecode =    `£ thousand     E-code`) %>% 
-  select( - `Local authority`, -Class) %>% 
-  gather(key="type", value="amount", -ecode) %>% 
-  mutate(start_year = 2008) %>% 
-  select(start_year, ecode, type, amount)
-
-
-long_09 <- mid_09_10 %>% 
-  gather(key="type", value="amount", -`E-code`) %>% 
-  rename(ecode = `E-code`) %>% 
-  filter(!(type %in% c("Local authority", "Class", "Region"))) %>% 
-  mutate(start_year = 2009) %>% 
-  select(start_year, ecode, type, amount)
-
-long_10 <- mid_10_11 %>% 
-  gather(key="type", value="amount", -`E-code`) %>% 
-  rename(ecode = `E-code`) %>% 
-  filter(!(type %in% c("Local authority", "Class"))) %>% 
-  mutate(start_year = 2010) %>% 
-  select(start_year, ecode, type, amount)
-
-long_11 <-  mid_11_12 %>% 
-  gather(key="type", value="amount", -`E-code`) %>% 
-  rename(ecode = `E-code`) %>% 
-  filter(!(type %in% c("Local authority", "Class"))) %>% 
-  mutate(start_year = 2011) %>% 
-  select(start_year, ecode, type, amount)
-
-long_12 <- mid_12_13 %>% 
-  gather(key="type", value="amount", -`E-code`) %>% 
-  rename(ecode = `E-code`) %>% 
-  filter(!(type %in% c("Local authority", "Class"))) %>% 
-  mutate(start_year = 2012) %>% 
-  select(start_year, ecode, type, amount)
-
-long_13 <- mid_13_14a  %>% 
-  gather(key="type", value="amount", -1)  
-names(long_13)[1] <- "ecode"
-long_13 <- long_13 %>% 
-  filter(!(type %in% c("Local authority", "Class"))) %>% 
-  mutate(start_year = 2013) %>% 
-  select(start_year, ecode, type, amount)
-
-long_08
-"Social Care strategy - children   TOTAL EXPENDITURE (Col 1+2)"
-
-
-
-# for each of the above, am interested in number of employees and total expenditure in adult social services 
-
-tidy_08_09 <- mid_08_09 %>% 
-  select(
-    `ecode` = `£ thousand     E-code`,
-    `children` = `Social Care strategy - children   TOTAL EXPENDITURE (Col 1+2)`,
-    `older` = `Older people (aged 65 or over) including older mentally ill    TOTAL EXPENDITURE (Col 1+2)`,
-    `total` = `TOTAL SOCIAL CARE*   TOTAL EXPENDITURE (Col 1+2)`
-    ) %>% tbl_df
-
-
-tidy_09_10 <- mid_09_10[, c(1, 7, 34, 43)] %>% tbl_df
-names(tidy_09_10) <- c("ecode", "children", "adult", "older")
-
-tidy_10_11 <- mid_10_11[, c(1, 6, 33, 42)] %>% tbl_df
-names(tidy_10_11) <- c("ecode", "children", "adult", "older")
-
-tidy_11_12 <- mid_11_12[,c(1, 6, 78, 87)] %>% tbl_df
-names(tidy_11_12) <- c("ecode", "children", "adult", "older")
-
-
-tidy_12_13 <- mid_12_13[, c(1, 6, 87, 96)] %>% tbl_df
-names(tidy_12_13) <- c("ecode", "children", "adult", "older")
-
-tidy_13_14 <- mid_13_14a[,c(1, 6, 33, 36)] %>% tbl_df
-names(tidy_13_14) <- c("ecode", "children", "adult", "older")
-
-
-
-tidy_08_09 <- tidy_08_09 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2008)
-
-tidy_08_09 <- tidy_08_09 %>% 
-  mutate(adult = total - older - children) %>% 
-  select(start_year, ecode, children, adult, older)
-
-tidy_09_10 <- tidy_09_10 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2009) %>% 
-  select(start_year, ecode, children, adult, older)
-
-
-tidy_10_11 <- tidy_10_11 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2010) %>% 
-  select(start_year, ecode, children, adult, older)
-
-
-tidy_11_12 <- tidy_11_12 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2011) %>% 
-  select(start_year, ecode, children, adult, older)
-
-tidy_12_13 <- tidy_12_13 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2012) %>% 
-  select(start_year, ecode, children, adult, older)
-
-tidy_13_14 <- tidy_13_14 %>% 
-  mutate_each(funs(as.numeric), -ecode) %>% 
-  mutate(start_year = 2013) %>% 
-  select(start_year, ecode, children, adult, older)
-
-
-tidy_ro3 <- tidy_08_09 %>% 
-  bind_rows(tidy_09_10) %>% 
-  bind_rows(tidy_10_11) %>% 
-  bind_rows(tidy_11_12) %>% 
-  bind_rows(tidy_12_13) %>% 
-  bind_rows(tidy_13_14)
-
-
-
-la_codes <- read.csv("data/support/lookups_between_ons_and_ecodes.csv") %>% tbl_df
-  
-tidy_linked_ro3 <- la_codes %>% 
-  select(ecode, ons_code, ons_region_name)  %>% 
-  left_join(tidy_ro3) %>% 
-  filter(str_detect(ons_code, "^E"))
-
-
-write.csv(tidy_linked_ro3, file="data/tidied/linked_r03.csv", row.names=F)
-
-
+ex <- data  %>% 
+  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
+  group_by(sex, la, year)  %>% 
+  summarise(
+    e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
+    e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
+    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
+  )
 
 
 # Cumulative survival from ages 50, 65 and 80 -----------------------------
