@@ -17,6 +17,7 @@ require(ggplot2)
 require(lattice)
 
 require(readxl)
+require(readr)
 
 
 # Data on expenditure -----------------------------------------------------
@@ -462,6 +463,109 @@ tidy_13$inner[
 
 # NEXT TO DO: consistency w/ Expense Type
 
+
+tidy_08$lvl2 <- str_trim(tidy_08$lvl2)
+tidy_08 <- tidy_08 %>% rename(expense_type = lvl2) 
+
+tidy_09$expense_type <- str_trim(tidy_09$expense_type)
+tidy_10$expense_type <- str_trim(tidy_10$expense_type)
+tidy_11$expense_type <- str_trim(tidy_11$expense_type)
+tidy_12$expense_type <- str_trim(tidy_12$expense_type)
+tidy_13$expense_type <- str_trim(tidy_13$expense_type)
+
+
+tdy_08 <- tidy_08 %>% 
+  select(start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy_09 <- tidy_09 %>% 
+  select(start_year=Start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy_10 <- tidy_10 %>% 
+  select(start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy_11 <- tidy_11 %>% 
+  select(start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy_12 <- tidy_12 %>% 
+  select(start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy_13 <- tidy_13 %>% 
+  select(start_year, ecode = `E-code`, outer, inner, expense_type, amount)
+
+tdy <- tdy_08 %>% 
+  bind_rows(tdy_09) %>% 
+  bind_rows(tdy_10) %>% 
+  bind_rows(tdy_11) %>% 
+  bind_rows(tdy_12) %>% 
+  bind_rows(tdy_13) 
+
+tdy$expense_type <- revalue(
+  tdy$expense_type,
+  replace = c(
+    "Capital Charges"         = "capital_charges",
+    "Capital Charges (C8)"    = "capital_charges", 
+    "Capital items (C8)"      = 'capital_charges',
+    "Employees"               = "employees",
+    "Employees (C1)"          = "employees",
+    "Other Income (C5)"                   = "other_income",
+    "Other income (inc joint arrangemts)" = "other_income",
+    "Sales Fees and Charges"        = "sales_fees_charges", 
+    "Sales, Fees & Charges (C4)"    = "sales_fees_charges",
+    "Sales, Fees and Charges (C4)"  = "sales_fees_charges",
+    "Running Expenses (C2)"                   = "running_expenses", 
+    "Running expenses (inc joint arrangemts)" = "running_expenses",
+    "NET CURRENT (Col 3-6)"                   = "net_current",
+    "Net Current Expenditure (C7 = C3 - C6)"  = "net_current",
+    
+    "NET TOTAL COST  exc Specific Grants" = "net_total_cost",
+    "Net Total Cost (C9 = C7 + C8)"       = "net_total_cost",
+    
+    "TOTAL  INCOME (Col 4+5)"             = "total_income",
+    "Total Income (C6 = C4 + C5)"         = "total_income",
+    
+    "TOTAL EXPENDITURE (Col 1+2)"         = "total_expenditure",
+    "Total Expenditure (C3 = C1 + C2)"    = "total_expenditure"
+  )
+  )
+
+# Now to link to ONS codes and find only UAs 
+
+links <- read_csv("data/support/lookups_between_ons_and_ecodes.csv")
+
+tdy <- links %>% select(ecode, ons_code) %>% inner_join(tdy)
+
+tdy <- tdy %>% select(ecode, ons_code, start_year, outer, inner, expense_type, amount)
+
+tdy %>% 
+  filter(expense_type=="net_total_cost") %>% 
+  group_by(start_year, inner) %>% 
+  filter(!is.na(inner)) %>% 
+  summarise(amount=sum(amount)/ 1000000) %>% 
+  ggplot(data=.) +
+  geom_line(aes(x=start_year, y=amount)) +
+  facet_wrap(~inner, scales="free_y")
+
+tdy %>% 
+  filter(expense_type=="net_total_cost") %>% 
+  group_by(start_year, outer) %>% 
+  filter(!is.na(outer) & !is.na(inner)) %>% 
+  summarise(amount=sum(amount)/ 1000000) %>% 
+  ggplot(data=.) +
+  geom_bar(aes(x=factor(start_year), y=amount, group=outer, fill=outer), stat ="identity") +
+  labs(x="Start of accounting year", y="Total spend in £billion") +
+  theme(
+    axis.text.x=element_text(angle=90), 
+    legend.position="bottom", 
+    legend.title=element_blank()
+    )
+
+ggsave("figures/total_spend_by_year.png",
+       height=10, width=8, dpi = 150, units = "cm")
+
+# Save tidied LA spend data
+
+tdy %>% filter(!is.na(outer) & !is.na(inner)) %>% 
+  write_csv(path="data/care_cuts/combined_linked_and_tidied_r03.csv")
 
 
 # Data on mort in LAs -----------------------------------------------------
