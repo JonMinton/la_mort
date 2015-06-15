@@ -545,6 +545,10 @@ tdy %>%
   geom_line(aes(x=start_year, y=amount)) +
   facet_wrap(~inner, scales="free_y")
 
+ggsave("figures/total_spend_by_inner_category.png",
+       height=15, width=15, dpi = 300, units = "cm")
+
+
 tdy %>% 
   filter(expense_type=="net_total_cost") %>% 
   group_by(start_year, outer) %>% 
