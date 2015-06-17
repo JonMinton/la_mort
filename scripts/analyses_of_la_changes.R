@@ -116,3 +116,32 @@ figs <- per_cap_spend %>%
   dlply(., .(type), fn)
 
 
+
+# Spend by region ---------------------------------------------------------
+
+
+link_to_reg <- read_csv("data/support/lookups_between_ons_and_ecodes.csv")
+link_to_reg <- link_to_reg %>% select(ons_code, ons_region_name)
+
+link_to_reg %>% inner_join(per_cap_spend) %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -ons_region_name) %>%  
+  group_by(year, ons_region_name) %>%
+  summarise(mn_per_cap = mean(per_cap_amt)) %>% 
+  ggplot(.) +
+  geom_line(aes(x=year, y=mn_per_cap, group=ons_region_name, colour=ons_region_name))
+
+link_to_reg %>% inner_join(per_cap_spend) %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -ons_region_name) %>%  
+  group_by(type, year, ons_region_name) %>%
+  summarise(mn_per_cap = mean(per_cap_amt)) %>% 
+  ggplot(.) +
+  geom_line(aes(x=year, y=mn_per_cap), size=1.3) + 
+  facet_grid(type ~ ons_region_name, scales="free_y") + 
+  theme(axis.text.x=element_text(angle=90)) + 
+  labs(title="Per capita spend by domain and region", y="Mean per capita spend (£ per person)", x="Start of Financial Year")
+
+ggsave(filename="figures/per_cap_spend_by_region_year.png", 
+       width=30, height=25, units="cm", dpi=150
+       )
+
+
