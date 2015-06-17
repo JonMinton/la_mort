@@ -94,9 +94,25 @@ per_cap_spend %>%
   geom_line(aes(x=year, y=amt_median)) + 
   facet_wrap(~ type, scales="free")
 
+per_cap_spend %>% 
+  gather(key="type", value="amount", -ons_code, -year) %>% 
+  ggplot(data = ., aes(x=year, y=amount)) +
+  geom_line(aes(group=ons_code), alpha=0.1) + 
+  geom_smooth() + 
+  facet_wrap(~ type, scales="free") 
 
-tot_exp %>% 
-  ggplot(data=.) +
-  geom_point(aes(x=start_year, y=amount), alpha=0.1) +
-  facet_wrap(~inner, scales="free") + 
-  stat_smooth(aes(x=start_year, y=amount), method="lm")
+fn <- function(X){
+  out <- X %>% 
+    ggplot(data = ., aes_string(x="year", y="amount")) +
+    geom_violin(aes(group=year), colour=NA, fill="grey") + 
+    stat_smooth(fill="lightblue") + 
+    labs(title=X$type[1])
+  
+    return(out)
+}
+
+figs <- per_cap_spend %>% 
+  gather(key="type", value="amount", -ons_code, -year) %>% 
+  dlply(., .(type), fn)
+
+
