@@ -49,10 +49,12 @@ ecode_lookup <- ecode_lookup  %>%
 
 dta <- dta %>% inner_join(ecode_lookup) %>% filter(class !="SD")
 
-tot_exp <- dta %>% filter(expense_type == "total_expenditure")
-tot_exp <- tot_exp %>% select(ons_code, year= start_year, inner, amount) %>% 
-  group_by(ons_code, year, inner) %>% summarise(amount=sum(amount)) %>% 
+tot_exp <- dta %>% filter(expense_type == "total_expenditure") %>% select(-expense_type)
+tot_exp <- tot_exp %>% select(ons_code, year= start_year, inner, amount, region, class) %>% 
+  group_by(ons_code, year, inner, region, class) %>% summarise(amount=sum(amount)) %>% 
   ungroup
+
+tot_exp <- tot_exp %>% filter(class !="O")
 
 # Now to make per (appropriate) capita
 dta_pop_counts <- read_csv("data/tidied/england_la_count.csv")
@@ -79,56 +81,51 @@ per_cap_spend <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
     adults_u65_other_pc = 1000 * adults_u65_other / pop_18_64,
     adults_u65_physical_pc = 1000 * adults_u65_physical / pop_18_64,
     adults_u65_social_care_pc = 1000 * adults_u65_social_care / pop_18_64
-) %>% select(ons_code, year, contains("pc"))
+) %>% select(ons_code, year, region, class, contains("pc"))
 
-per_cap_spend %>% 
-  gather(key="type", value="amount", -ons_code, -year) %>% 
-  group_by(year, type) %>% summarise(
-    amount_upper = mean(amount) + 2 * sd(amount),
-    amount_lower = mean(amount) - 2 * sd(amount),
-    amt_mean = mean(amount),
-    amt_median = median(amount),
-    amt_lq = quantile(amount, 0.025),
-    amt_uq = quantile(amount, 0.975)
-    ) %>% ggplot(.) +
-  geom_line(aes(x=year, y=amt_median)) + 
-  facet_wrap(~ type, scales="free")
-
-per_cap_spend %>% 
-  gather(key="type", value="amount", -ons_code, -year) %>% 
-  ggplot(data = ., aes(x=year, y=amount)) +
-  geom_line(aes(group=ons_code), alpha=0.1) + 
-  geom_smooth() + 
-  facet_wrap(~ type, scales="free") 
-
-fn <- function(X){
-  out <- X %>% 
-    ggplot(data = ., aes_string(x="year", y="amount")) +
-    geom_violin(aes(group=year), colour=NA, fill="grey") + 
-    stat_smooth(fill="lightblue") + 
-    labs(title=X$type[1])
-  
-    return(out)
-}
-
-figs <- per_cap_spend %>% 
-  gather(key="type", value="amount", -ons_code, -year) %>% 
-  dlply(., .(type), fn)
 
 
 
 # Spend by region ---------------------------------------------------------
 
 
-link_to_reg <- read_csv("data/support/lookups_between_ons_and_ecodes.csv")
-link_to_reg <- link_to_reg %>% select(ons_code, ons_region_name)
 
-link_to_reg %>% inner_join(per_cap_spend) %>% 
-  gather(key="type", value= "per_cap_amt", -ons_code, -year, -ons_region_name) %>%  
-  group_by(year, ons_region_name) %>%
+per_cap_spend %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -region, -class) %>%  
+  group_by(year, region) %>%
   summarise(mn_per_cap = mean(per_cap_amt)) %>% 
   ggplot(.) +
-  geom_line(aes(x=year, y=mn_per_cap, group=ons_region_name, colour=ons_region_name))
+  geom_line(aes(x=year, y=mn_per_cap, group=region, colour=region)) + 
+  labs(x="Start of financial year", y="mean per capita spend")
+
+ggsave(filename="figures/per_cap_spend_by_region_and_year_one_facet.png",
+       width=20, height=20, units="cm", dpi=150
+       )
+
+per_cap_spend %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -region, -class) %>%  
+  group_by(year, region) %>%
+  summarise(mn_per_cap = mean(per_cap_amt)) %>% 
+  ggplot(.) +
+  geom_line(aes(x=year, y=mn_per_cap)) +
+  facet_wrap(~region) + 
+  labs(x="Start of financial year", y="mean per capita spend")
+
+ggsave(filename="figures/per_cap_spend_by_region_and_year_facetted.png",
+       width=20, height=20, units="cm", dpi=150
+)
+
+
+per_cap_spend %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -region, -class) %>%  
+  group_by(year, class) %>%
+  summarise(mn_per_cap = mean(per_cap_amt)) %>% 
+  ggplot(.) +
+  geom_line(aes(x=year, y=mn_per_cap)) +
+  facet_wrap(~class) + 
+  labs(x="Start of financial year", y="mean per capita spend")
+
+
 
 link_to_reg %>% inner_join(per_cap_spend) %>% 
   gather(key="type", value= "per_cap_amt", -ons_code, -year, -ons_region_name) %>%  
