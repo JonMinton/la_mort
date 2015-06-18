@@ -145,3 +145,26 @@ ggsave(filename="figures/per_cap_spend_by_region_year.png",
        )
 
 
+
+
+# By region and LA type ---------------------------------------------------
+
+ecode_to_ons_code <- dta  %>% select(ecode, ons_code)  %>% distinct()
+ecode_lookup
+tmp <- ecode_to_ons_code %>% inner_join(ecode_lookup) 
+
+per_cap_spend  %>% 
+  inner_join(tmp) %>% select(-local_authority, -ecode) %>% 
+  gather(key="type", value= "per_cap_amt", -ons_code, -year, -region, -class) %>%  
+  group_by(type, year, region, class) %>%
+  summarise(mn_per_cap = mean(per_cap_amt)) %>% 
+  ggplot(.) +
+  geom_line(aes(x=year, y=mn_per_cap, group=class, colour=class), size=1.3) + 
+  facet_grid(type ~ region, scales="free_y") + 
+  theme(axis.text.x=element_text(angle=90)) + 
+  labs(title="Per capita spend by domain, LA class and region", y="Mean per capita spend (£ per person)", x="Start of Financial Year")
+
+
+ggsave(filename="figures/per_cap_spend_by_class_region_year.png", 
+       width=30, height=25, units="cm", dpi=150
+)
