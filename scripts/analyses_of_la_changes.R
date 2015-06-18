@@ -23,9 +23,8 @@ require(readr)
 
 
 # Data --------------------------------------------------------------------
-
 dta <- read_csv(file = "data/care_cuts/combined_linked_and_tidied_r03.csv")
-
+  
 # keep only the following inner categories
 
 dta <- dta %>% filter(outer =="Adults" & 
@@ -39,6 +38,11 @@ dta <- dta %>% filter(outer =="Adults" &
                    "adults_u65_social_care"
                    ) & start_year > 2008
                )
+
+# adjust amounts for wage inflation
+wage_deflator <-  read_csv(file="data/care_cuts/expenditure/wage_deflator.csv")
+dta <- dta %>% left_join(wage_deflator, by=c("start_year" = "year") ) %>% 
+  mutate(amount = amount / deflator) %>% select(-tax_year_average, -deflator)
 
 ecode_lookup <- read_excel("data/care_cuts/4_digit_code_extract.xlsx", sheet="Sheet1")
 ecode_lookup <- ecode_lookup  %>% 
@@ -110,8 +114,6 @@ per_cap_spend <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
 
 # Spend by region ---------------------------------------------------------
 
-
-
 per_cap_spend %>% 
   gather(key="type", value= "per_cap_amt", -ons_code, -year, -region, -class) %>%  
   group_by(year, region) %>%
@@ -173,7 +175,7 @@ per_cap_spend %>%
   geom_line(aes(x=year, y=mn_per_cap), size=1.3) + 
   facet_grid(type ~ class, scales="free_y") + 
   theme(axis.text.x=element_text(angle=90)) + 
-  labs(title="Per capita spend by domain and LA class", y="Mean per capita spend (£ per person)", x="Start of Financial Year")
+  labs(title="Per capita spend by domain and LA class", y="Mean per capita spend (£ per person in 2014 prices)", x="Start of Financial Year")
 
 ggsave(filename="figures/per_cap_spend_by_la_class_year.png", 
        width=30, height=25, units="cm", dpi=150
@@ -188,7 +190,7 @@ per_cap_spend %>%
   geom_line(aes(x=year, y=mn_per_cap, group=class, colour=class), size=1.3) + 
   facet_grid(type ~ region, scales="free_y") + 
   theme(axis.text.x=element_text(angle=90)) + 
-  labs(title="Per capita spend by domain, region and LA class", y="Mean per capita spend (£ per person)", x="Start of Financial Year")
+  labs(title="Per capita spend by domain, region and LA class", y="Mean per capita spend (£ per person in 2014 prices)", x="Start of Financial Year")
 
 ggsave(filename="figures/per_cap_spend_by_domain_region_la_class_year.png", 
        width=30, height=25, units="cm", dpi=150
