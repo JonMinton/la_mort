@@ -110,7 +110,7 @@ per_cap_spend <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
 ) %>% select(ons_code, year, region, class, contains("pc"))
 
 
-
+write_csv(per_cap_spend, path="data/tidied/per_capita_spend_by_region_and_la_class.csv")
 
 # Spend by region ---------------------------------------------------------
 
