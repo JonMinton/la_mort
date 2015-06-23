@@ -112,6 +112,46 @@ per_cap_spend <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
 
 write_csv(per_cap_spend, path="data/tidied/per_capita_spend_by_region_and_la_class.csv")
 
+per_cap_spend_region <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
+  group_by(year, region) %>% 
+  summarise(
+    adults_65_pc = 1000 * sum(adults_65plus) / sum(pop_65_plus),
+    adults_us6_learning_pc = 1000 * sum(adults_u65_learning) / sum(pop_18_64),
+    adults_u65_mental_pc = 1000 * sum(adults_u65_mental) / sum(pop_18_64),
+    adults_u65_other_pc = 1000 * sum(adults_u65_other) / sum(pop_18_64),
+    adults_u65_physical_pc = 1000 * sum(adults_u65_physical) / sum(pop_18_64),
+    adults_u65_social_care_pc = 1000 * sum(adults_u65_social_care) / sum(pop_18_64)
+  ) %>% select(year, region, contains("pc"))
+
+write_csv(per_cap_spend_region, path="data/tidied/per_capita_spend_aggregated_to_region.csv")
+
+per_cap_spend_class <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
+  group_by(year, class) %>% 
+  summarise(
+    adults_65_pc = 1000 * sum(adults_65plus) / sum(pop_65_plus),
+    adults_us6_learning_pc = 1000 * sum(adults_u65_learning) / sum(pop_18_64),
+    adults_u65_mental_pc = 1000 * sum(adults_u65_mental) / sum(pop_18_64),
+    adults_u65_other_pc = 1000 * sum(adults_u65_other) / sum(pop_18_64),
+    adults_u65_physical_pc = 1000 * sum(adults_u65_physical) / sum(pop_18_64),
+    adults_u65_social_care_pc = 1000 * sum(adults_u65_social_care) / sum(pop_18_64)
+  ) %>% select(year, class, contains("pc"))
+
+write_csv(per_cap_spend_class, path="data/tidied/per_capita_spend_aggregated_to_la_class.csv")
+
+per_cap_spend_regclass <- tot_exp %>% inner_join(pop_by_broad_age_group) %>%
+  group_by(year, region, class) %>% 
+  summarise(
+    adults_65_pc = 1000 * sum(adults_65plus) / sum(pop_65_plus),
+    adults_us6_learning_pc = 1000 * sum(adults_u65_learning) / sum(pop_18_64),
+    adults_u65_mental_pc = 1000 * sum(adults_u65_mental) / sum(pop_18_64),
+    adults_u65_other_pc = 1000 * sum(adults_u65_other) / sum(pop_18_64),
+    adults_u65_physical_pc = 1000 * sum(adults_u65_physical) / sum(pop_18_64),
+    adults_u65_social_care_pc = 1000 * sum(adults_u65_social_care) / sum(pop_18_64)
+  ) %>% select(year, region, class, contains("pc"))
+
+write_csv(per_cap_spend_regclass, path="data/tidied/per_capita_spend_aggregated_to_region_and_class.csv")
+
+
 # Spend by region ---------------------------------------------------------
 
 per_cap_spend %>% 
