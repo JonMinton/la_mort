@@ -7,6 +7,8 @@ rm(list=ls())
 
 # pre-requisites ----------------------------------------------------------
 
+require(readr)
+
 
 require(plyr)
 require(stringr)
@@ -38,19 +40,23 @@ require(lattice)
 # e50, e65 and e80 by la, year and age ------------------------------------
 
 
-data <- read.csv("data/tidied/england_la_count.csv") %>%
-  tbl_df
+data <- read_csv("data/tidied/england_la_count.csv") 
+
+# Remove Isle of Scilly  (E06000053) and City of London (E09000001)
+data <- data %>% filter(!(lad2013_code %in% c("E06000053", "E09000001")))
 
 ex <- data  %>% 
-  select(la=lad2013_code, year, sex, age, deaths, population)  %>% 
+  select(la=lad2013_code, year, sex, age, deaths, population)  %>%
+  filter(age < 90) %>% 
   group_by(sex, la, year)  %>% 
   summarise(
     e50=sum(age[age>=50]*deaths[age>=50])/sum(deaths[age>=50]), 
     e65=sum(age[age>=65]*deaths[age>=65])/sum(deaths[age>=65]), 
-    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80])
+    e80=sum(age[age>=80]*deaths[age>=80])/sum(deaths[age>=80]),
+    e85=sum(age[age>=85]*deaths[age>=85])/sum(deaths[age>=85])
     )
 
-write.csv(ex, file="data/tidied/england_ex.csv", row.names=FALSE)
+write_csv(ex, path="data/tidied/england_ex.csv")
 
 
 # Cumulative survival from ages 50, 65 and 80 -----------------------------
@@ -76,15 +82,14 @@ dta <- data %>%
   do(fn(.))
 
 
-write.csv(dta, file="data/tidied/cumulative_surv_by_la.csv", row.names=F)
+write_csv(dta, path="data/tidied/cumulative_surv_by_la.csv")
 
 
 
 # conditional median les --------------------------------------------------
 
 
-data <- read.csv("data/tidied/cumulative_surv_by_la.csv") %>%
-  tbl_df
+data <- read_csv("data/tidied/cumulative_surv_by_la.csv") 
 
 med_le_0 <- data  %>% 
   group_by(la, year, sex)  %>% 
@@ -113,22 +118,28 @@ med_le_80 <- data %>%
   mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
   summarise(med_le_80 = age[flag==T][1])  
 
+med_le_85 <- data %>%
+  group_by(la, year, sex) %>%
+  mutate(surv = surv/surv[age==85]) %>%
+  mutate(tmp2 = lag(surv))  %>% 
+  mutate(flag=ifelse(surv < 0.5 & tmp2 > 0.5, T, F))  %>% 
+  summarise(med_le_85 = age[flag==T][1])  
 
 
 med_le <- med_le_0 %>%
   full_join(med_le_50) %>%
   full_join(med_le_65) %>%
-  full_join(med_le_80)
+  full_join(med_le_80) %>% 
+  full_join(med_le_85)
 
-write.csv(med_le, file="data/tidied/median_cond_le_by_la.csv", row.names=F)
+write_csv(med_le, path="data/tidied/median_cond_le_by_la.csv")
 
 
 
 
 # regression coeffs -------------------------------------------------------
 
-data <- read.csv(file="data/tidied/cumulative_surv_by_la.csv")  %>% 
-  tbl_df
+data <- read_csv(file="data/tidied/cumulative_surv_by_la.csv")  
 
 fn <- function(X){
   this_year <- X$year[1]
@@ -163,19 +174,29 @@ fn <- function(X){
     coef(.) %>% .["age"] %>%
     as.numeric
   
+  c_85 <- X %>%
+    filter(age >=85) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    coef(.) %>% .["age"] %>%
+    as.numeric
+  
+  
   output <- data.frame(
     la = this_la, 
     year = this_year,
     sex = this_sex,
-    c_35, c_50, c_65, c_80
+    c_35, c_50, c_65, c_80, c_85
     )
   return(output)
 }
 
 
-dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+dta <- ddply(data, .(la, year, sex), fn, .progress="text") %>% tbl_df
 
-write.csv(dta, file="data/tidied/coeffs_on_age_by_la.csv", row.names=F)
+write_csv(dta, path="data/tidied/coeffs_on_age_by_la.csv")
+
+
+# Standard errors ---------------------------------------------------------
 
 
 fn <- function(X){
@@ -210,25 +231,51 @@ fn <- function(X){
     summary(.)  %>% .$coefficients %>% 
     .["age","Std. Error"]
   
+  s_85 <- X %>%
+    filter(age >=85) %>%
+    lm(log(adj_cmr) ~ age, data=.) %>%
+    summary(.)  %>% .$coefficients %>% 
+    .["age","Std. Error"]
+  
+  
   output <- data.frame(
     la = this_la, 
     year = this_year,
     sex = this_sex,
-    s_35, s_50, s_65, s_80
+    s_35, s_50, s_65, s_80, s_85
   )
   return(output)
 }
 
 
-dta <- ddply(data, .(la, year, sex), fn, .progress="text")
+dta <- ddply(data, .(la, year, sex), fn, .progress="text") %>% tbl_df
 
-write.csv(dta, file="data/tidied/ses_on_coeffs_on_age_by_la.csv", row.names=F)
+write_csv(dta, path="data/tidied/ses_on_coeffs_on_age_by_la.csv")
 
-# e65 compared with change in e65  ----------------------------------------
-
+# ex compared with change in ex  ----------------------------------------
 
 dta <- read.csv("data/tidied/england_ex.csv") %>%
   tbl_df
+
+
+dta  %>% 
+  group_by(sex, la)  %>% 
+  arrange(year)  %>% 
+  mutate(e50_change = e50 - lag(e50))  %>% 
+  filter(year >=2003) %>%
+  ggplot(data=.) + 
+  geom_point(aes(x=e50, y=e50_change, group=sex, colour=sex), alpha=0.2) + 
+  facet_wrap(~year) + 
+  geom_smooth(aes(x=e50, y=e50_change, group=sex, colour=sex), size=1.2, method="lm") + 
+  geom_hline(xintercept=0, linetype="dashed") +
+  coord_cartesian(ylim=c(-2.5,2.5)) +
+  labs(x="life expectancy at age 50",y="change in life expectancy\nat age 50 from previous year")
+
+ggsave(file="figures/delta_e50_vs_e50.png",
+       height=20, width=20, units="cm", dpi=300 
+)
+
+
 
 dta  %>% 
   group_by(sex, la)  %>% 
@@ -265,24 +312,24 @@ ggsave(file="figures/delta_e80_vs_e80.png",
        height=20, width=20, units="cm", dpi=300 
 )
 
-
-
 dta  %>% 
   group_by(sex, la)  %>% 
   arrange(year)  %>% 
-  mutate(e50_change = e50 - lag(e50))  %>% 
+  mutate(e85_change = e85 - lag(e85))  %>% 
   filter(year >=2003) %>%
   ggplot(data=.) + 
-  geom_point(aes(x=e50, y=e50_change, group=sex, colour=sex), alpha=0.2) + 
+  geom_point(aes(x=e85, y=e85_change, group=sex, colour=sex), alpha=0.2) + 
   facet_wrap(~year) + 
-  geom_smooth(aes(x=e50, y=e50_change, group=sex, colour=sex), size=1.2, method="lm") + 
+  geom_smooth(aes(x=e85, y=e85_change, group=sex, colour=sex), size=1.2, method="lm") + 
   geom_hline(xintercept=0, linetype="dashed") +
   coord_cartesian(ylim=c(-2.5,2.5)) +
-  labs(x="life expectancy at age 50",y="change in life expectancy\nat age 50 from previous year")
+  labs(x="life expectancy at age 85",y="change in life expectancy\nat age 85 from previous year")
 
-ggsave(file="figures/delta_e50_vs_e50.png",
+ggsave(file="figures/delta_e85_vs_e85.png",
        height=20, width=20, units="cm", dpi=300 
 )
+
+
 
 
 
@@ -366,4 +413,29 @@ ggsave(file="figures/coef_gradient_e80.png",
        height=10, width=15, dpi=300, unit="cm"
 )
 
+
+fn <- function(x){
+  tmp <- lm(e85_change ~ e85, data=x)
+  out <- as.double(coefficients(tmp)["e85"])
+  return(out)
+}
+
+coeffs_e85 <- dta %>%
+  group_by(sex, la) %>%
+  arrange(year) %>%
+  mutate(e85_change = e85-lag(e85)) %>%
+  filter(year >=2003) %>%
+  ungroup %>%
+  ddply(., .(sex, year), fn)
+
+coeffs_e85 %>%  
+  rename(coef = V1) %>%
+  ggplot(data=.) +
+  geom_bar(aes(x=year, y=coef), stat="identity") + 
+  facet_wrap(~ sex) + 
+  labs(x="Year", y="Coefficient on gradient for change in e85") 
+
+ggsave(file="figures/coef_gradient_e85.png",
+       height=10, width=15, dpi=300, unit="cm"
+)
 
