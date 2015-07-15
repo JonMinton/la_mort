@@ -439,3 +439,84 @@ ggsave(file="figures/coef_gradient_e85.png",
        height=10, width=15, dpi=300, unit="cm"
 )
 
+
+
+# overall trends throughout England & Wales  -----------------------------------
+
+
+rm(list=ls())
+
+
+
+# pre-requisites ----------------------------------------------------------
+
+require(readr)
+
+
+require(plyr)
+require(stringr)
+require(tidyr)
+require(dplyr)
+
+require(ggplot2)
+require(lattice)
+
+
+
+# e35, e50, e65, e75 and e85 by year and age ------------------------------------
+
+
+data <- read_csv("data/tidied/england_la_count.csv") 
+
+dta_grp <- data %>% 
+  select(sex, age, year, population, deaths) %>% 
+  group_by(sex, age, year) %>% 
+  summarise(population = sum(population), deaths = sum(deaths)) %>% 
+  filter(!is.na(deaths) & !is.na(population)) %>%
+  ungroup() %>% 
+  arrange(sex, year, age) %>% 
+  mutate(death_rate = deaths / population)
+
+dta_grp$lx <- 1
+
+fn <- function(X){
+  out <- X %>% group_by(sex, year) %>% 
+    arrange(age) 
+  
+  N <- nrow(out)
+  
+  out$lx <- NA
+  out$lx[1] <- 1
+  
+  for (i in 2:N){
+    prev_lx = out$lx[i-1]
+    prev_dr = out$death_rate[i-1]
+    prev_sr = 1 - prev_dr
+    cum_surv = prev_lx * prev_sr
+    out$lx[i] <- cum_surv    
+    }
+  
+  return(out)
+}
+
+
+dta_lx <- dta_grp %>% 
+  group_by(sex, year) %>% 
+  do(fn(.))
+
+
+dta_ex <- dta_grp %>% group_by(sex, year) %>% 
+  summarise(
+    e0 = sum(age * deaths) / sum(deaths),
+    e50 = sum(age[age>=50] * deaths[age>=50]) / sum(deaths[age >=50]),
+    e65 = sum(age[age>=65] * deaths[age>=65]) / sum(deaths[age >=65]),
+    e85 = sum(age[age>=85] * deaths[age>=85]) / sum(deaths[age >=85])
+  )
+
+    
+dta_ex %>% 
+  gather(key = "age", value = "ex", -sex, -year) %>% 
+  ggplot(., mapping=aes(x=year, y = ex)) +
+  geom_line() + geom_point() + 
+  facet_wrap( ~ sex + age, scales = "free")
+
